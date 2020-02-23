@@ -1,0 +1,2 @@
+graft litex/data/cpu/mor1kx/verilog/
+global-exclude *.py[cod]
