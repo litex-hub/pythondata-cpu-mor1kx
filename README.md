@@ -19,7 +19,7 @@ with open(os.path.join(litex.data.cpu.mor1kx.location, my_data_file)) as f:
 
 The data files come from https://github.com/openrisc/mor1kx.git
 and are imported using `git subtrees` to the directory
-[litex/data/cpu/mor1kx/verilog](litex/data/cpu/mor1kx/verilog].
+[litex/data/cpu/mor1kx/verilog](litex/data/cpu/mor1kx/verilog).
 
 
 
