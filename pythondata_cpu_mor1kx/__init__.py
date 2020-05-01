@@ -4,11 +4,11 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.0.post126"
-version_tuple = (5, 0, 126)
+version_str = "5.0.post127"
+version_tuple = (5, 0, 127)
 try:
     from packaging.version import Version as V
-    pversion = V("5.0.post126")
+    pversion = V("5.0.post127")
 except ImportError:
     pass
 
@@ -37,11 +37,11 @@ Date:   Mon Dec 23 01:23:20 2019 +0900
 """
 
 # Tool version info
-tool_version_str = "0.0.post50"
-tool_version_tuple = (0, 0, 50)
+tool_version_str = "0.0.post51"
+tool_version_tuple = (0, 0, 51)
 try:
     from packaging.version import Version as V
-    ptool_version = V("0.0.post50")
+    ptool_version = V("0.0.post51")
 except ImportError:
     pass
 
