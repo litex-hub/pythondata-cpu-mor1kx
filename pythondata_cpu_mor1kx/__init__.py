@@ -4,44 +4,39 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.0.post136"
-version_tuple = (5, 0, 136)
+version_str = "5.0.post143"
+version_tuple = (5, 0, 143)
 try:
     from packaging.version import Version as V
-    pversion = V("5.0.post136")
+    pversion = V("5.0.post143")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "5.0.post76"
-data_version_tuple = (5, 0, 76)
+data_version_str = "5.0.post77"
+data_version_tuple = (5, 0, 77)
 try:
     from packaging.version import Version as V
-    pdata_version = V("5.0.post76")
+    pdata_version = V("5.0.post77")
 except ImportError:
     pass
-data_git_hash = "06e2e46afbad62572c31bde88e8f2424e23ecda2"
-data_git_describe = "v5.0-76-g06e2e46"
+data_git_hash = "9679d18eabaf6a15ee56eafdd35812043d9ae193"
+data_git_describe = "v5.0-77-g9679d18"
 data_git_msg = """\
-commit 06e2e46afbad62572c31bde88e8f2424e23ecda2
-Author: JaewonHur <57657645+JaewonHur@users.noreply.github.com>
-Date:   Mon Dec 23 01:23:20 2019 +0900
+commit 9679d18eabaf6a15ee56eafdd35812043d9ae193
+Author: Andrey Bacherov <bandvig@mail.ru>
+Date:   Sun Jul 26 15:40:12 2020 +0300
 
-    Fix mor1kx_decode to accept valid l.fl1 (l.ff1) instructions (#110)
-    
-    * Fix mor1kx_decode to only accept valid l.fl1 and l.ff1 instructions
-    
-    Both l.fl1 and l.ff1 have bit 9 set in the insruction as port of their op codes,
-    mor1kx_decode does not currently properly check this
+    Open OPTION_FTOI_ROUNDING as "CPP" in according with spec 1.3.
 
 """
 
 # Tool version info
-tool_version_str = "0.0.post60"
-tool_version_tuple = (0, 0, 60)
+tool_version_str = "0.0.post66"
+tool_version_tuple = (0, 0, 66)
 try:
     from packaging.version import Version as V
-    ptool_version = V("0.0.post60")
+    ptool_version = V("0.0.post66")
 except ImportError:
     pass
 
