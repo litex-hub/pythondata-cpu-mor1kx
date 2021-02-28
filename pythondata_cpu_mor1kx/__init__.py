@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.0.post171"
-version_tuple = (5, 0, 171)
+version_str = "5.0.post178"
+version_tuple = (5, 0, 178)
 try:
     from packaging.version import Version as V
-    pversion = V("5.0.post171")
+    pversion = V("5.0.post178")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "5.0.post80"
-data_version_tuple = (5, 0, 80)
+data_version_str = "5.0.post87"
+data_version_tuple = (5, 0, 87)
 try:
     from packaging.version import Version as V
-    pdata_version = V("5.0.post80")
+    pdata_version = V("5.0.post87")
 except ImportError:
     pass
-data_git_hash = "a9ac8213d9f752485a6f2bd46885ca37a53899c2"
-data_git_describe = "v5.0-80-ga9ac821"
+data_git_hash = "0bca071fce56caa459d61f6c9cf7e096dc1c5d58"
+data_git_describe = "v5.0-87-g0bca071"
 data_git_msg = """\
-commit a9ac8213d9f752485a6f2bd46885ca37a53899c2
-Merge: dd01358 cf2bce7
+commit 0bca071fce56caa459d61f6c9cf7e096dc1c5d58
+Merge: a9ac821 7eb70ca
 Author: Stafford Horne <shorne@gmail.com>
-Date:   Fri Jan 1 10:49:08 2021 +0900
+Date:   Mon Mar 1 06:33:11 2021 +0900
 
-    Merge pull request #116 from openrisc/fix-ci
+    Merge pull request #118 from stffrdhrn/github-ci
     
-    travis: Env vars are no longer passed to docker, maybe quotes?
+    Convert Travis CI to GitHub Actions
 
 """
 
