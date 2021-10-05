@@ -86,6 +86,13 @@ module mor1kx_immu
    wire 			      itlb_trans_spr_cs;
    reg 				      itlb_trans_spr_cs_r;
 
+   wire				      itlb_match_spr_tx;
+   reg				      itlb_match_spr_tx_r;
+   wire				      itlb_match_spr_tx_busy;
+   wire				      itlb_trans_spr_tx;
+   reg				      itlb_trans_spr_tx_r;
+   wire				      itlb_trans_spr_tx_busy;
+
    wire 			      immucr_spr_cs;
    reg 				      immucr_spr_cs_r;
    reg [OPTION_OPERAND_WIDTH-1:0]     immucr;
@@ -174,22 +181,35 @@ endgenerate
          if (itlb_match_reload_we & !tlb_reload_huge)
            itlb_match_we[j] = 1;
          if (j[WAYS_WIDTH-1:0] == spr_way_idx)
-           itlb_match_we[j] = itlb_match_spr_cs & spr_bus_we_i & !spr_bus_ack;
+           itlb_match_we[j] = itlb_match_spr_tx & spr_bus_we_i;
 
          itlb_trans_we[j] = 0;
          if (itlb_trans_reload_we & !tlb_reload_huge)
            itlb_trans_we[j] = 1;
          if (j[WAYS_WIDTH-1:0] == spr_way_idx)
-           itlb_trans_we[j] = itlb_trans_spr_cs & spr_bus_we_i & !spr_bus_ack;
+           itlb_trans_we[j] = itlb_trans_spr_tx & spr_bus_we_i;
       end
    end
 
    assign pagefault_o = (supervisor_mode_i ? !sxe : !uxe) &
 			!tlb_reload_busy_o & !busy_o;
 
-   assign busy_o = ((itlb_match_spr_cs | itlb_trans_spr_cs) & !spr_bus_ack |
-		    (itlb_match_spr_cs_r | itlb_trans_spr_cs_r) &
-		    spr_bus_ack & !spr_bus_ack_r) & enable_i;
+   // itlb_*_spr_tx - signals to indicate the start of a read/write
+   //                 transaction
+   // itlb_*_spr_cs_r is registered 1 clock cycle delay of itlb_*_spr_cs
+   assign itlb_match_spr_tx = itlb_match_spr_cs & !itlb_match_spr_cs_r;
+   assign itlb_trans_spr_tx = itlb_trans_spr_cs & !itlb_trans_spr_cs_r;
+
+   // When we have SPR writes they cause the immu to output bad data for
+   // 2 clock cycles.  For 2 clocks we signal busy so fetch does not proceed.
+   always @(posedge clk) begin
+     itlb_match_spr_tx_r <= itlb_match_spr_tx;
+     itlb_trans_spr_tx_r <= itlb_trans_spr_tx;
+   end
+   assign itlb_match_spr_tx_busy = itlb_match_spr_tx | itlb_match_spr_tx_r;
+   assign itlb_trans_spr_tx_busy = itlb_trans_spr_tx | itlb_trans_spr_tx_r;
+
+   assign busy_o = enable_i & (itlb_match_spr_tx_busy | itlb_trans_spr_tx_busy);
 
    assign spr_way_idx_full = {spr_bus_addr_i[10], spr_bus_addr_i[8]};
    assign spr_way_idx = spr_way_idx_full[WAYS_WIDTH-1:0];
@@ -231,16 +251,16 @@ endgenerate
    assign itlb_trans_spr_cs = spr_bus_stb_i & (spr_bus_addr_i[15:11] == 5'd2) &
                               |spr_bus_addr_i[10:9] & spr_bus_addr_i[7];
 
-   assign itlb_match_addr = itlb_match_spr_cs & !spr_bus_ack ?
+   assign itlb_match_addr = itlb_match_spr_tx ?
 			    spr_bus_addr_i[OPTION_IMMU_SET_WIDTH-1:0] :
 			    virt_addr_i[13+(OPTION_IMMU_SET_WIDTH-1):13];
-   assign itlb_trans_addr = itlb_trans_spr_cs & !spr_bus_ack ?
+   assign itlb_trans_addr = itlb_trans_spr_tx ?
 			    spr_bus_addr_i[OPTION_IMMU_SET_WIDTH-1:0] :
 			    virt_addr_i[13+(OPTION_IMMU_SET_WIDTH-1):13];
 
-   assign itlb_match_din = itlb_match_spr_cs & spr_bus_we_i & !spr_bus_ack ?
+   assign itlb_match_din = itlb_match_spr_tx & spr_bus_we_i ?
 			   spr_bus_dat_i : itlb_match_reload_din;
-   assign itlb_trans_din = itlb_trans_spr_cs & spr_bus_we_i & !spr_bus_ack ?
+   assign itlb_trans_din = itlb_trans_spr_tx & spr_bus_we_i ?
 			   spr_bus_dat_i : itlb_trans_reload_din;
 
    assign itlb_match_huge_addr = virt_addr_i[24+(OPTION_IMMU_SET_WIDTH-1):24];
@@ -455,5 +475,144 @@ for (i = 0; i < OPTION_IMMU_WAYS; i=i+1) begin : itlb
       );
 end
 endgenerate
+
+/*-----------------Formal Checking------------------*/
+
+`ifdef FORMAL
+
+   reg f_past_valid;
+
+   initial f_past_valid = 1'b0;
+   initial assume (rst);
+
+   always @(posedge clk)
+      f_past_valid <= 1'b1;
+
+   always @(*)
+      if (!f_past_valid)
+         assume (rst);
+
+//---------------IMMU PROPERTIES----------------
+
+   (* anyconst *) wire [OPTION_OPERAND_WIDTH-1:0] f_vaddr;
+
+   //Physical Address of f_vaddr virtual address is asserted to verify expected PPN.
+   //Case 1: Page bits = 13 bits
+   always @(posedge clk) begin
+      if ((virt_addr_match_i == f_vaddr) && way_hit[0]
+          && !way_huge[0] && !pagefault_o && f_past_valid)
+         assert ((phys_addr_o[12:0] == f_vaddr[12:0]) &&
+                 phys_addr_o[31:13] == itlb_trans_dout[0][31:13]);
+   end
+
+   //Case 2: Page bits = 24 bits (huge)
+   always @(posedge clk) begin
+      if ((virt_addr_match_i == f_vaddr) && way_huge_hit[0] &&
+          way_huge[0] && !pagefault_o && f_past_valid)
+         assert ((phys_addr_o[23:0] == f_vaddr[23:0]) &&
+                  phys_addr_o[31:24] == itlb_trans_huge_dout[0][31:24]);
+   end
+
+   //On TLB miss, cache should not be inhibited.
+   always @(*)
+      if (tlb_miss_o)
+      assert (!cache_inhibit_o);
+
+   //Way hits are one hot encoded.
+   always @(*) begin
+      assert ($onehot0(way_hit));
+      assert ($onehot0(way_huge_hit));
+   end
+
+   //On TLB hit, tlb_miss_o should be 0.
+   always @(*)
+      if (way_huge[0] & way_huge_hit[0] || !way_huge[0] & way_hit[0])
+         assert (!tlb_miss_o);
+
+   //IMMU SPR registers are accessible if the last 5 bits
+   // of spr_bus_addr_i corresponds to group 2.
+   always @(*)
+      if ($onehot(itlb_match_spr_cs) || $onehot(itlb_trans_spr_cs))
+         assert (spr_bus_addr_i[15:11] == 5'd2);
+
+   always @(posedge clk)
+      if (f_past_valid && spr_bus_ack_o && |spr_bus_addr_i[10:9])
+         assert (itlb_match_spr_cs != itlb_trans_spr_cs);
+
+   //Spr can't access both Match TLB and Translation TLB at the same time.
+   always @(posedge clk)
+      if (itlb_match_spr_cs)
+         assert (!itlb_trans_spr_cs);
+
+   //On spr read request, spr write signals shouldn't be generated,
+   always @(*)
+      if (spr_bus_stb_i && !spr_bus_we_i && spr_bus_addr_i[15:11] == 5'd2)
+         assert (!itlb_trans_we & !itlb_match_we);
+
+   //SPR transmit signals are set high at the posedge of spr chip select signalS
+   always @(posedge clk)
+      if (($rose(itlb_trans_spr_cs) | $rose(itlb_match_spr_cs)) && f_past_valid)
+         assert (itlb_trans_spr_tx | itlb_match_spr_tx);
+
+   //When translation transmit pulse rises, match transmit pulse shouldn't rise
+   always @(posedge clk)
+      if (f_past_valid && $rose(itlb_trans_spr_tx))
+         assert (!itlb_match_spr_tx);
+
+   reg f_busy_valid;
+   //Busy should be set high for every spr read/write transactions
+   always @(posedge clk)
+      if (f_past_valid && spr_bus_stb_i && ($rose(itlb_match_spr_cs)
+          | $rose(itlb_trans_spr_cs)) && !$past(rst) && enable_i) begin
+         assert (busy_o);
+         f_busy_valid <= 1;
+      end
+
+   //SPR read/write should keep busy high for two clocks
+   always @(posedge clk)
+      if (f_past_valid && $rose(f_busy_valid) && !$past(rst) & enable_i)
+         assert (busy_o);
+
+   fspr_slave #(
+       .OPTION_OPERAND_WIDTH(OPTION_OPERAND_WIDTH),
+       .SLAVE("IMMU")
+       )
+       u_f_immu_slave (
+        .clk(clk),
+        .rst(rst),
+         // SPR interface
+        .spr_bus_addr_i(spr_bus_addr_i),
+        .spr_bus_we_i(spr_bus_we_i),
+        .spr_bus_stb_i(spr_bus_stb_i),
+        .spr_bus_dat_i(spr_bus_dat_i),
+        .spr_bus_dat_o(spr_bus_dat_o),
+        .spr_bus_ack_o(spr_bus_ack_o),
+        .f_past_valid(f_past_valid)
+       );
+
+
+//--------------Cover-----------------
+
+`ifdef IMMU
+
+   always @(posedge clk)
+      if (f_past_valid && !$past(rst)) begin
+         //TLB HIT-------------Trace 0
+         cover (!tlb_miss_o && phys_addr_o != 0);
+         //Match write---------Trace 2
+         cover (itlb_match_spr_cs && $past(itlb_match_we)
+                && $rose(spr_bus_ack_o));
+         //Trans write---------Trace 1
+         cover (itlb_trans_spr_cs && $past(itlb_trans_we)
+                && $rose(spr_bus_ack_o));
+         //SPR Write-----------Trace 4
+         cover ($rose(f_busy_valid) && busy_o && $past(spr_bus_we_i) && spr_bus_we_i);
+         //SPR READ------------Trace 3
+         cover ($rose(f_busy_valid) && busy_o && $past(spr_bus_we_i) && !spr_bus_we_i);
+      end
+
+`endif
+
+`endif
 
 endmodule

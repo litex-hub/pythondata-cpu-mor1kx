@@ -799,7 +799,6 @@ module mor1kx_cpu_cappuccino
    /* mor1kx_execute_alu AUTO_TEMPLATE (
     .padv_decode_i			(padv_decode_o),
     .padv_execute_i			(padv_execute_o),
-    .padv_ctrl_i			(padv_ctrl_o),
     .opc_alu_i			        (execute_opc_alu_o),
     .opc_alu_secondary_i		(execute_opc_alu_secondary_o),
     .imm16_i				(execute_imm16_o),
@@ -883,7 +882,6 @@ module mor1kx_cpu_cappuccino
       .rst                              (rst),
       .padv_decode_i                    (padv_decode_o),         // Templated
       .padv_execute_i                   (padv_execute_o),        // Templated
-      .padv_ctrl_i                      (padv_ctrl_o),           // Templated
       .pipeline_flush_i                 (pipeline_flush_o),
       .opc_alu_i                        (execute_opc_alu_o),     // Templated
       .opc_alu_secondary_i              (execute_opc_alu_secondary_o), // Templated
@@ -928,7 +926,6 @@ module mor1kx_cpu_cappuccino
    /* mor1kx_lsu_cappuccino AUTO_TEMPLATE (
     .padv_execute_i			(padv_execute_o),
     .padv_ctrl_i			(padv_ctrl_o),
-    .decode_valid_i			(decode_valid_o),
     .exec_lsu_adr_i			(adder_result_o),
     .ctrl_lsu_adr_i			(ctrl_lsu_adr_o),
     .ctrl_rfb_i				(ctrl_rfb_o),
@@ -1002,7 +999,6 @@ module mor1kx_cpu_cappuccino
       .rst                              (rst),
       .padv_execute_i                   (padv_execute_o),        // Templated
       .padv_ctrl_i                      (padv_ctrl_o),           // Templated
-      .decode_valid_i                   (decode_valid_o),        // Templated
       .exec_lsu_adr_i                   (adder_result_o),        // Templated
       .ctrl_lsu_adr_i                   (ctrl_lsu_adr_o),        // Templated
       .ctrl_rfb_i                       (ctrl_rfb_o),            // Templated
@@ -1063,7 +1059,6 @@ module mor1kx_cpu_cappuccino
 
    /* mor1kx_rf_cappuccino AUTO_TEMPLATE (
     .padv_decode_i			(padv_decode_o),
-    .padv_execute_i			(padv_execute_o),
     .padv_ctrl_i			(padv_ctrl_o),
     .fetch_rf_adr_valid_i		(fetch_rf_adr_valid_o),
     .fetch_rfa_adr_i			(fetch_rfa_adr_o),
@@ -1108,7 +1103,6 @@ module mor1kx_cpu_cappuccino
       .clk                              (clk),
       .rst                              (rst),
       .padv_decode_i                    (padv_decode_o),         // Templated
-      .padv_execute_i                   (padv_execute_o),        // Templated
       .padv_ctrl_i                      (padv_ctrl_o),           // Templated
       .decode_valid_i                   (decode_valid_o),        // Templated
       .fetch_rf_adr_valid_i             (fetch_rf_adr_valid_o),  // Templated
@@ -1591,4 +1585,89 @@ module mor1kx_cpu_cappuccino
       end
    endgenerate
 
+
+/*-----------------Formal Checking-------------------*/
+
+`ifdef FORMAL
+
+   reg f_past_valid = 0;
+   initial f_past_valid = 1'b0;
+   initial assume (rst);
+
+   always @(posedge clk)
+      f_past_valid <= 1'b1;
+
+   always @(*)
+      if (!f_past_valid)
+         assume (rst);
+
+   //Reset Assertions
+   always @(posedge clk) begin
+      if (f_past_valid && $past(rst) && !rst) begin
+         assert (!fetch_valid_o);
+         assert (!ibus_req_o);
+         assert (!spr_bus_stb_o);
+         assert (!ibus_burst_o);
+         assert (!spr_bus_ack_ic_i);
+         assert (!spr_bus_ack_immu_i);
+         assert (!decode_valid_o);
+         assert (!decode_bubble_o);
+         assert (!execute_bubble_o);
+         assert (!padv_decode_o);
+         assert (!padv_execute_o);
+         assert (!padv_ctrl_o);
+         assert (!predicted_flag_o);
+         assert (!spr_bus_ack_dc_i);
+         assert (!spr_bus_ack_dmmu_i);
+         assert (!ctrl_bubble_o);
+         assert (!wb_rf_wb_o);
+      end
+   end
+
+   always @(posedge clk) begin
+      if (f_past_valid && padv_decode_o && !$past(rst))
+         assert (fetch_valid_o);
+   end
+
+   //SPR Property checking
+   always @(posedge clk)
+      if (f_past_valid && !$past(rst) &&
+          ($rose(spr_bus_ack_dmmu_i) || $rose(spr_bus_ack_immu_i) ||
+           $rose(spr_bus_ack_dc_i) || $rose(spr_bus_ack_ic_i)))
+         assert (spr_bus_stb_o || $past(spr_bus_stb_o));
+
+   always @(*)
+      case (ibus_dat_i[`OR1K_ALU_OPC_SELECT])
+        `OR1K_ALU_OPC_ADDC,
+        `OR1K_ALU_OPC_ADD,
+        `OR1K_ALU_OPC_SUB,
+        `OR1K_ALU_OPC_MUL,
+        `OR1K_ALU_OPC_MULU,
+        `OR1K_ALU_OPC_DIV,
+        `OR1K_ALU_OPC_DIVU,
+        `OR1K_ALU_OPC_SHRT,
+        `OR1K_ALU_OPC_FFL1,
+        `OR1K_ALU_OPC_EXTBH,
+        `OR1K_ALU_OPC_EXTW:
+          assume (ibus_dat_i[`OR1K_OPCODE_SELECT] == `OR1K_OPCODE_ALU);
+      endcase
+
+   fspr_master #(
+        .OPTION_OPERAND_WIDTH(OPTION_OPERAND_WIDTH)
+        )
+        u_spr_master(
+        .clk(clk),
+        .rst(rst),
+        // SPR interface
+        .spr_bus_addr_o(spr_bus_addr_o),
+        .spr_bus_we_o(spr_bus_we_o),
+        .spr_bus_stb_o(spr_bus_stb_o),
+        .spr_bus_dat_o(spr_bus_dat_o),
+        .spr_bus_ack_ic_i(spr_bus_ack_ic_i),
+        .spr_bus_ack_dc_i(spr_bus_ack_dc_i),
+        .spr_bus_ack_dmmu_i(spr_bus_ack_dmmu_i),
+        .spr_bus_ack_immu_i(spr_bus_ack_immu_i),
+        .f_past_valid(f_past_valid)
+  );
+`endif
 endmodule // mor1kx_cpu_cappuccino

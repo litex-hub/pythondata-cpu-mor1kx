@@ -55,8 +55,7 @@ module mor1kx_execute_alu
     // pipeline control signal in
     input 			      padv_decode_i,
     input 			      padv_execute_i,
-    input 			      padv_ctrl_i,
-    
+
     input 			      pipeline_flush_i ,// flush pipelined fpu
 
     // inputs to ALU
@@ -852,4 +851,226 @@ endgenerate
 
    assign alu_valid_o = !alu_stall;
 
+/*-------------------Formal Checking------------------*/
+
+`ifdef FORMAL
+
+`ifdef ALU
+`define ASSUME assume
+`else
+`define ASSUME assert
+`endif
+
+   reg f_past_valid;
+   initial f_past_valid = 1'b0;
+
+   always @(posedge clk)
+      f_past_valid <= 1'b1;
+
+   always @(*)
+      if (!f_past_valid)
+         assume (rst);
+      else
+         assume (!rst);
+
+   wire [16:0] f_exec_opcodes;
+   assign f_exec_opcodes = {op_add_i, op_mul_i, op_div_i,
+                            op_movhi_i, op_shift_i,
+                            op_ffl1_i, op_mtspr_i,
+                            op_mfspr_i, op_ext_i,
+                            op_jbr_i, op_jr_i};
+
+   always @(posedge clk)
+      if (op_mul_i && f_past_valid && !$past(rst))
+         `ASSUME (op_mul_unsigned_i | op_mul_signed_i);
+
+   always @(posedge clk)
+      if (op_div_i && f_past_valid && !$past(rst))
+         `ASSUME (op_div_signed_i | op_div_unsigned_i);
+
+   always @(posedge clk)
+      if (f_past_valid)
+         `ASSUME ($onehot0(f_exec_opcodes));
+
+   //MULTIPLICATION: PIPELINED
+   always @(posedge clk) begin
+      if ($past(decode_op_mul_i,3) && $past(padv_decode_i,3) &&
+          $past(padv_execute_i,2) && f_past_valid &&
+          FEATURE_MULTIPLIER == "PIPELINED" && !$past(rst)
+          && op_mul_i && !$past(rst,2) && !$past(rst,3)) begin
+         assert (mul_valid);
+         assert (alu_valid_o);
+         assert (!alu_stall);
+      end
+   end
+   
+   //MULTIPLICATION: SIMULATION
+   always @(*) begin
+      if (FEATURE_MULTIPLIER == "SIMULATION" &&
+          op_mul_i && !rst) begin
+         //No stall for simulation based multiplier
+         assert (!alu_stall);
+         assert (alu_valid_o);
+         assert (mul_valid);
+      end
+   end
+
+
+   //MULTIPLICATION: SERIAL & THREESTAGE
+   generate
+      if (FEATURE_MULTIPLIER == "SERIAL" || FEATURE_MULTIPLIER == "THREESTAGE") begin : f_mul_multiclock
+          f_multiclock_op #(
+             .STABLE_WIDTH(32 + 32 + 1 + 1),
+             .OP_MAX_CLOCKS(FEATURE_MULTIPLIER == "SERIAL" ? 32 : 3)
+           ) u_f_multiclock_mul (
+             .clk(clk),
+             .f_op_i(op_mul_i),
+             .f_op_valid_i(mul_valid),
+             .decode_valid_i(decode_valid_i),
+             .f_stable_i({rfa_i, rfb_i, op_mul_unsigned_i, op_mul_signed_i}),
+             .f_past_valid(f_past_valid)
+          );
+      end
+   endgenerate
+
+   always @(posedge clk) begin
+      if (FEATURE_MULTIPLIER == "NONE") begin
+         assume (!op_mul_i);
+         assert (!mul_result);
+      end
+   end
+
+   //TODO
+   //Formal verification of FPU.
+
+   //DIVIDER: SIMULATION
+   always @(posedge clk) begin
+      if (FEATURE_DIVIDER == "SIMULATION" &&
+         (opc_alu_i == `OR1K_ALU_OPC_DIV ||
+         opc_alu_i == `OR1K_ALU_OPC_DIVU)) begin
+         assert (div_valid);
+         //Divide by zero testing
+         if (b==0)
+            assert (div_by_zero);
+       end
+
+       if (FEATURE_DIVIDER == "NONE" && f_past_valid && !$past(rst)) begin
+          assert (!div_result);
+          assert (!div_by_zero);
+       end
+   end
+
+   //DIVIDER: SERIAL
+   generate
+      if (FEATURE_DIVIDER == "SERIAL") begin : f_div_multiclock
+          f_multiclock_op #(
+             .STABLE_WIDTH(32 + 32 + 1 + 1),
+             .OP_MAX_CLOCKS(FEATURE_MULTIPLIER == "SERIAL" ? 32 : 3)
+           ) u_f_multiclock_div (
+             .clk(clk),
+             .f_op_i(op_div_i),
+             .f_op_valid_i(div_valid),
+             .decode_valid_i(decode_valid_i),
+             .f_stable_i({rfa_i, rfb_i, op_div_unsigned_i, op_div_signed_i}),
+             .f_past_valid(f_past_valid)
+          );
+      end
+   endgenerate
+
+   //SHIFTER: BARREL
+   (* anyconst *) reg [4:0] f_b;
+   wire [OPTION_OPERAND_WIDTH-1:0] f_sll;
+   assign f_sll = a << f_b;
+   wire [OPTION_OPERAND_WIDTH-1:0] f_srl;
+   assign f_srl = a >> f_b;
+
+   always @(posedge clk) begin
+      if (OPTION_SHIFTER == "BARREL" && op_shift_i &&
+          !op_alu_i && f_past_valid && !$past(rst)) begin
+         //Logical shifts
+         if (opc_alu_shr == `OR1K_ALU_OPC_SECONDARY_SHRT_SLL && b == f_b)
+            assert (alu_result_o == f_sll);
+         if (opc_alu_shr == `OR1K_ALU_OPC_SECONDARY_SHRT_SRL && b == f_b)
+            assert (alu_result_o == f_srl);
+      end
+   end
+
+   //SHIFTER: SERIAL
+   generate
+      if (OPTION_SHIFTER == "SERIAL") begin : f_shft_multiclock
+          f_multiclock_op #(
+             .STABLE_WIDTH(32 + 32 + `OR1K_IMM_WIDTH + 32 + 1 +`OR1K_ALU_OPC_WIDTH),
+             .OP_MAX_CLOCKS(32)
+           ) u_f_multiclock_shft (
+             .clk(clk),
+             .f_op_i(op_shift_i),
+             .f_op_valid_i(shift_valid),
+             .decode_valid_i(decode_valid_i),
+             .f_stable_i({rfa_i, rfb_i, imm16_i, immediate_i, immediate_sel_i, opc_alu_secondary_i}),
+             .f_past_valid(f_past_valid)
+          );
+      end
+   endgenerate
+
+   //FFL1
+   generate
+      if (FEATURE_FFL1 == "REGISTERED") begin : f_ffl1_multiclock
+          f_multiclock_op #(
+             .STABLE_WIDTH(`OR1K_ALU_OPC_WIDTH),
+             .OP_MAX_CLOCKS(1)
+           ) u_f_multiclock_ffl1 (
+             .clk(clk),
+             .f_op_i(op_ffl1_i),
+             .f_op_valid_i(ffl1_valid),
+             .decode_valid_i(decode_valid_i),
+             .f_stable_i(opc_alu_secondary_i),
+             .f_past_valid(f_past_valid)
+          );
+      end
+   endgenerate
+
+   always @(*) begin
+
+      //If adder result is zero than a must be equal to b.
+      if ((adder_result == 0) && !adder_carryout && op_add_i)
+         assert (carry_clear_o && a_eq_b);
+
+      //If carry is generated then carry flag has to be set
+      if (adder_carryout & op_add_i)
+         assert (carry_set_o);
+
+      //Overflow set condition
+      if (op_add_i && adder_signed_overflow && FEATURE_OVERFLOW != "NONE")
+         assert (overflow_set_o);
+
+      //Short duration ALU operations shouldn't stall. 
+      if (!op_div_i && !op_mul_i && !fpu_op_is_arith &&
+          !fpu_op_is_cmp && !op_shift_i && !op_ffl1_i)
+         assert (!alu_stall);
+
+   end
+
+   wire [OPTION_OPERAND_WIDTH-1:0] f_logic_and;
+   assign f_logic_and = a & b;
+   wire [OPTION_OPERAND_WIDTH-1:0] f_logic_or;
+   assign f_logic_or = a | b;
+   wire [OPTION_OPERAND_WIDTH-1:0] f_logic_xor;
+   assign f_logic_xor = a ^ b;
+
+   always @(*) begin
+
+      //Logical Operations
+      if (opc_alu_i == `OR1K_ALU_OPC_AND && op_alu_i
+          && !op_mtspr_i && !op_mfspr_i)
+         assert (logic_result == f_logic_and);
+      else if (opc_alu_i == `OR1K_ALU_OPC_OR
+               && (op_alu_i || op_mtspr_i || op_mfspr_i))
+         assert (logic_result == f_logic_or);
+      else if (opc_alu_i == `OR1K_ALU_OPC_XOR
+               && op_alu_i && !op_mtspr_i && !op_mfspr_i)
+         assert (logic_result == f_logic_xor);
+
+   end
+
+`endif
 endmodule // mor1kx_execute_alu
