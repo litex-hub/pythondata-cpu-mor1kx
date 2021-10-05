@@ -4,42 +4,42 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.0.post182"
-version_tuple = (5, 0, 182)
+version_str = "5.0.post224"
+version_tuple = (5, 0, 224)
 try:
     from packaging.version import Version as V
-    pversion = V("5.0.post182")
+    pversion = V("5.0.post224")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "5.0.post87"
-data_version_tuple = (5, 0, 87)
+data_version_str = "5.0.post119"
+data_version_tuple = (5, 0, 119)
 try:
     from packaging.version import Version as V
-    pdata_version = V("5.0.post87")
+    pdata_version = V("5.0.post119")
 except ImportError:
     pass
-data_git_hash = "0bca071fce56caa459d61f6c9cf7e096dc1c5d58"
-data_git_describe = "v5.0-87-g0bca071"
+data_git_hash = "95eee0596a160ffdfd8ee6bc8b88268b2e49ec5e"
+data_git_describe = "v5.0-119-g95eee05"
 data_git_msg = """\
-commit 0bca071fce56caa459d61f6c9cf7e096dc1c5d58
-Merge: a9ac821 7eb70ca
+commit 95eee0596a160ffdfd8ee6bc8b88268b2e49ec5e
+Merge: e28f9a4 6e61ee5
 Author: Stafford Horne <shorne@gmail.com>
-Date:   Mon Mar 1 06:33:11 2021 +0900
+Date:   Wed Sep 1 22:18:37 2021 +0900
 
-    Merge pull request #118 from stffrdhrn/github-ci
+    Merge pull request #138 from Harshitha172000/master
     
-    Convert Travis CI to GitHub Actions
+    Update Mor1kx-Formal project progress in Readme
 
 """
 
 # Tool version info
-tool_version_str = "0.0.post95"
-tool_version_tuple = (0, 0, 95)
+tool_version_str = "0.0.post105"
+tool_version_tuple = (0, 0, 105)
 try:
     from packaging.version import Version as V
-    ptool_version = V("0.0.post95")
+    ptool_version = V("0.0.post105")
 except ImportError:
     pass
 
