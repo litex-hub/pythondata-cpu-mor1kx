@@ -4,42 +4,39 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.0.post236"
-version_tuple = (5, 0, 236)
+version_str = "5.1.post118"
+version_tuple = (5, 1, 118)
 try:
     from packaging.version import Version as V
-    pversion = V("5.0.post236")
+    pversion = V("5.1.post118")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "5.0.post119"
-data_version_tuple = (5, 0, 119)
+data_version_str = "5.1.post0"
+data_version_tuple = (5, 1, 0)
 try:
     from packaging.version import Version as V
-    pdata_version = V("5.0.post119")
+    pdata_version = V("5.1.post0")
 except ImportError:
     pass
-data_git_hash = "95eee0596a160ffdfd8ee6bc8b88268b2e49ec5e"
-data_git_describe = "v5.0-119-g95eee05"
+data_git_hash = "16ad5add0ee799ca13aaf582002f08aa0c8c7ba7"
+data_git_describe = "v5.1-0-g16ad5ad"
 data_git_msg = """\
-commit 95eee0596a160ffdfd8ee6bc8b88268b2e49ec5e
-Merge: e28f9a4 6e61ee5
+commit 16ad5add0ee799ca13aaf582002f08aa0c8c7ba7
 Author: Stafford Horne <shorne@gmail.com>
-Date:   Wed Sep 1 22:18:37 2021 +0900
+Date:   Sun Jan 9 15:44:35 2022 +0900
 
-    Merge pull request #138 from Harshitha172000/master
-    
-    Update Mor1kx-Formal project progress in Readme
+    mor1kx v5.1
 
 """
 
 # Tool version info
-tool_version_str = "0.0.post117"
-tool_version_tuple = (0, 0, 117)
+tool_version_str = "0.0.post118"
+tool_version_tuple = (0, 0, 118)
 try:
     from packaging.version import Version as V
-    ptool_version = V("0.0.post117")
+    ptool_version = V("0.0.post118")
 except ImportError:
     pass
 
