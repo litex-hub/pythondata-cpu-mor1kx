@@ -4,30 +4,33 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.1.post118"
-version_tuple = (5, 1, 118)
+version_str = "5.1.post120"
+version_tuple = (5, 1, 120)
 try:
     from packaging.version import Version as V
-    pversion = V("5.1.post118")
+    pversion = V("5.1.post120")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "5.1.post0"
-data_version_tuple = (5, 1, 0)
+data_version_str = "5.1.post2"
+data_version_tuple = (5, 1, 2)
 try:
     from packaging.version import Version as V
-    pdata_version = V("5.1.post0")
+    pdata_version = V("5.1.post2")
 except ImportError:
     pass
-data_git_hash = "16ad5add0ee799ca13aaf582002f08aa0c8c7ba7"
-data_git_describe = "v5.1-0-g16ad5ad"
+data_git_hash = "aca24812520db8e3a0347ac45b0ac18027ccf053"
+data_git_describe = "v5.1-2-gaca2481"
 data_git_msg = """\
-commit 16ad5add0ee799ca13aaf582002f08aa0c8c7ba7
+commit aca24812520db8e3a0347ac45b0ac18027ccf053
+Merge: 16ad5ad 698681d
 Author: Stafford Horne <shorne@gmail.com>
-Date:   Sun Jan 9 15:44:35 2022 +0900
+Date:   Wed Jan 12 06:08:22 2022 +0900
 
-    mor1kx v5.1
+    Merge pull request #144 from stffrdhrn/synth-params
+    
+    core: Add parameters to the synth job
 
 """
 
