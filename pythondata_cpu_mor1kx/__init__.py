@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.1.post128"
-version_tuple = (5, 1, 128)
+version_str = "5.1.post130"
+version_tuple = (5, 1, 130)
 try:
     from packaging.version import Version as V
-    pversion = V("5.1.post128")
+    pversion = V("5.1.post130")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "5.1.post2"
-data_version_tuple = (5, 1, 2)
+data_version_str = "5.1.post4"
+data_version_tuple = (5, 1, 4)
 try:
     from packaging.version import Version as V
-    pdata_version = V("5.1.post2")
+    pdata_version = V("5.1.post4")
 except ImportError:
     pass
-data_git_hash = "aca24812520db8e3a0347ac45b0ac18027ccf053"
-data_git_describe = "v5.1-2-gaca2481"
+data_git_hash = "44ea6983674072feed48ece06009acb9e86eb05c"
+data_git_describe = "v5.1-4-g44ea698"
 data_git_msg = """\
-commit aca24812520db8e3a0347ac45b0ac18027ccf053
-Merge: 16ad5ad 698681d
+commit 44ea6983674072feed48ece06009acb9e86eb05c
+Merge: aca2481 6b1beaa
 Author: Stafford Horne <shorne@gmail.com>
-Date:   Wed Jan 12 06:08:22 2022 +0900
+Date:   Sun Feb 27 06:18:13 2022 +0900
 
-    Merge pull request #144 from stffrdhrn/synth-params
+    Merge pull request #148 from openrisc/fpcsr_free_access
     
-    core: Add parameters to the synth job
+    Make FPCSR is R/W accessible for both user- and supervisor- modes.
 
 """
 
