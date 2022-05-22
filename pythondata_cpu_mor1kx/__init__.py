@@ -4,33 +4,33 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.1.post132"
-version_tuple = (5, 1, 132)
+version_str = "5.1.post162"
+version_tuple = (5, 1, 162)
 try:
     from packaging.version import Version as V
-    pversion = V("5.1.post132")
+    pversion = V("5.1.post162")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "5.1.post4"
-data_version_tuple = (5, 1, 4)
+data_version_str = "5.1.post34"
+data_version_tuple = (5, 1, 34)
 try:
     from packaging.version import Version as V
-    pdata_version = V("5.1.post4")
+    pdata_version = V("5.1.post34")
 except ImportError:
     pass
-data_git_hash = "44ea6983674072feed48ece06009acb9e86eb05c"
-data_git_describe = "v5.1-4-g44ea698"
+data_git_hash = "4cebbb684bba8f9fe74f9b69e679796d4fd4a35b"
+data_git_describe = "v5.1-34-g4cebbb6"
 data_git_msg = """\
-commit 44ea6983674072feed48ece06009acb9e86eb05c
-Merge: aca2481 6b1beaa
+commit 4cebbb684bba8f9fe74f9b69e679796d4fd4a35b
+Merge: 44ea698 1a8c19b
 Author: Stafford Horne <shorne@gmail.com>
-Date:   Sun Feb 27 06:18:13 2022 +0900
+Date:   Mon May 23 06:01:28 2022 +0900
 
-    Merge pull request #148 from openrisc/fpcsr_free_access
+    Merge pull request #147 from stffrdhrn/or1k-linux-failing
     
-    Make FPCSR is R/W accessible for both user- and supervisor- modes.
+    Revert "dcache: Allow writing during write_pending"
 
 """
 
