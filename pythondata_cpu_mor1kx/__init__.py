@@ -4,24 +4,24 @@ data_location = os.path.join(__dir__, "verilog")
 src = "https://github.com/openrisc/mor1kx.git"
 
 # Module version
-version_str = "5.1.post162"
-version_tuple = (5, 1, 162)
+version_str = "5.1.1.post128"
+version_tuple = (5, 1, 1, 128)
 try:
     from packaging.version import Version as V
-    pversion = V("5.1.post162")
+    pversion = V("5.1.1.post128")
 except ImportError:
     pass
 
 # Data version info
-data_version_str = "5.1.post34"
-data_version_tuple = (5, 1, 34)
+data_version_str = "5.1.1.post0"
+data_version_tuple = (5, 1, 1, 0)
 try:
     from packaging.version import Version as V
-    pdata_version = V("5.1.post34")
+    pdata_version = V("5.1.1.post0")
 except ImportError:
     pass
 data_git_hash = "4cebbb684bba8f9fe74f9b69e679796d4fd4a35b"
-data_git_describe = "v5.1-34-g4cebbb6"
+data_git_describe = "v5.1.1-0-g4cebbb6"
 data_git_msg = """\
 commit 4cebbb684bba8f9fe74f9b69e679796d4fd4a35b
 Merge: 44ea698 1a8c19b
