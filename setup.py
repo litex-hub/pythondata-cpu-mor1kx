@@ -1,9 +1,15 @@
 import setuptools
+import re
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-from pythondata_cpu_mor1kx import version_str
+with open("pythondata_cpu_mor1kx/__init__.py", "r") as fh:
+    version_str = re.search(
+        r'^version_str = "([^"]+)"',
+        fh.read(),
+        re.MULTILINE,
+    ).group(1)
 
 setuptools.setup(
     name="pythondata-cpu-mor1kx",
@@ -24,7 +30,7 @@ Python module containing verilog files for OpenRISC1000 cpu.""",
     zip_safe=False,
     packages=setuptools.find_packages(),
     package_data={
-    	'cpu_mor1kx': ['cpu_mor1kx/verilog/**'],
+    	'pythondata_cpu_mor1kx': ['verilog/**'],
     },
     include_package_data=True,
     project_urls={
